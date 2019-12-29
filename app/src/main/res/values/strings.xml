@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">EmpaLink Sample Project</string>
+    <string name="app_name">Empatica E4 App</string>
     <string name="accel">Accelerometers</string>
     <string name="accel_x">x:</string>
     <string name="accel_y">y:</string>
@@ -10,4 +10,7 @@
     <string name="emptyText">-</string>
     <string name="temp_label">Temperature</string>
     <string name="battery_label">Battery</string>
+    <string name="stop_streaming">Stop Streaming</string>
+    <string name="on_wrist">On Wrist</string>
+    <string name="not_on_wrist">Not On Wrist</string>
 </resources>

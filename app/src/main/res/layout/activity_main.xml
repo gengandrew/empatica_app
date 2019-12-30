@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:width="50dp"
                 android:id="@+id/accel_x"
-                android:text="@string/emptyText"/>
+                android:text="@string/empty_text"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -57,7 +57,7 @@
                 android:layout_height="wrap_content"
                 android:width="50dp"
                 android:id="@+id/accel_y"
-                android:text="@string/emptyText"/>
+                android:text="@string/empty_text"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -69,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:width="50dp"
                 android:id="@+id/accel_z"
-                android:text="@string/emptyText"/>
+                android:text="@string/empty_text"/>
 
         </LinearLayout>
 
@@ -84,7 +84,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/bvp"
-            android:text="@string/emptyText"/>
+            android:text="@string/calibrating_text"/>
 
         <TextView
             android:id="@+id/eda_label"
@@ -97,7 +97,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/eda"
-            android:text="@string/emptyText"/>
+            android:text="@string/calibrating_text"/>
 
         <TextView
             android:id="@+id/ibi_label"
@@ -110,7 +110,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/ibi"
-            android:text="@string/emptyText"/>
+            android:text="@string/calibrating_text"/>
+
+        <TextView
+            android:id="@+id/heart_label"
+            android:layout_marginTop="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/heart_label" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/heart"
+            android:text="@string/calibrating_text"/>
 
         <TextView
             android:id="@+id/temp_label"
@@ -123,30 +136,26 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/temperature"
-            android:text="@string/emptyText"/>
+            android:text="@string/calibrating_text"/>
 
         <TextView
-            android:id="@+id/battery_label"
+            android:id="@+id/wrist_label"
             android:layout_marginTop="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/battery_label" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/battery"
-            android:text="@string/emptyText"/>
+            android:text="@string/wrist_label"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/wrist_status_label"
-            android:text="@string/emptyText"/>
+            android:text="@string/calibrating_text"/>
 
         <Button
             android:id="@+id/disconnectButton"
+            android:layout_marginTop="10dp"
             android:text="@string/stop_streaming"
+            android:textColor="@android:color/white"
             android:background="@android:color/holo_red_light"
             android:layout_width="match_parent"
             android:layout_height="44dp" />

@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private TextView edaLabel;
     private TextView ibiLabel;
     private TextView temperatureLabel;
-    private TextView batteryLabel;
+    private TextView heartLabel;
     private TextView statusLabel;
     private TextView deviceNameLabel;
     private LinearLayout dataCnt;
@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         edaLabel = findViewById(R.id.eda);
         ibiLabel = findViewById(R.id.ibi);
         temperatureLabel = findViewById(R.id.temperature);
-        batteryLabel = findViewById(R.id.battery);
+        heartLabel = findViewById(R.id.heart);
         deviceNameLabel = findViewById(R.id.deviceName);
 
         final Button disconnectButton = findViewById(R.id.disconnectButton);
@@ -72,8 +72,12 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             @Override
             public void onClick(View v) {
                 if (deviceManager != null) {
+                    deviceManager.stopScanning();
                     deviceManager.disconnect();
+                    deviceManager.cleanUp();
+                    deviceManager = null;
                 }
+                initEmpaticaDeviceManager();
             }
         });
 
@@ -101,10 +105,10 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                                 }
                             }
                         }).setNegativeButton("Exit application", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                finish();
-                            }
-                        }).show();
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                }).show();
             }
         }
     }
@@ -127,6 +131,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 return;
             }
 
+            clearLabels();
             deviceManager = new EmpaDeviceManager(getApplicationContext(), this, this);
             deviceManager.authenticateWithAPIKey(EMPATICA_API_KEY);
             Log.d("CustomDebug", "Authentication with key is complete");
@@ -209,7 +214,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             show();
         } else if (status == EmpaStatus.DISCONNECTED) {
             Log.d("CustomDebug", "Device is Disconnect with count");
-            updateLabel(deviceNameLabel, " The Device has been disconnected");
+            updateLabel(deviceNameLabel, " The Device is disconnected");
             hide();
         }
     }
@@ -217,39 +222,40 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
         Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
-        updateLabel(accel_xLabel, "" + x);
-        updateLabel(accel_yLabel, "" + y);
-        updateLabel(accel_zLabel, "" + z);
+        updateLabel(accel_xLabel, Integer.toString(x));
+        updateLabel(accel_yLabel, Integer.toString(y));
+        updateLabel(accel_zLabel, Integer.toString(z));
     }
 
     @Override
     public void didReceiveBVP(float bvp, double timestamp) {
         Log.d("CustomDebug", "BVP is [" + bvp + "]");
-        updateLabel(bvpLabel, "" + bvp);
+        updateLabel(bvpLabel, Float.toString(bvp));
     }
 
     @Override
     public void didReceiveBatteryLevel(float battery, double timestamp) {
         Log.d("CustomDebug", "Battery is [" + battery + "]");
-        updateLabel(batteryLabel, Float.toString(battery*100));
     }
 
     @Override
     public void didReceiveGSR(float gsr, double timestamp) {
         Log.d("CustomDebug", "GSR is [" + gsr + "]");
-        updateLabel(edaLabel, "" + gsr);
+        updateLabel(edaLabel, Float.toString(gsr));
     }
 
     @Override
     public void didReceiveIBI(float ibi, double timestamp) {
         Log.d("CustomDebug", "IBI is [" + ibi + "]");
-        updateLabel(ibiLabel, "" + ibi);
+        updateLabel(ibiLabel, Float.toString(ibi));
+        float heartRate = 60/ibi;
+        updateLabel(heartLabel, Float.toString(heartRate));
     }
 
     @Override
     public void didReceiveTemperature(float temp, double timestamp) {
         Log.d("CustomDebug", "Temperature is [" + temp + "]");
-        updateLabel(temperatureLabel, "" + temp);
+        updateLabel(temperatureLabel, Float.toString(temp));
     }
 
     private void updateLabel(final TextView label, final String text) {
@@ -260,6 +266,18 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 label.setText(text);
             }
         });
+    }
+
+    private void clearLabels() {
+        updateLabel(deviceNameLabel, "");
+        updateLabel(accel_xLabel, "-");
+        updateLabel(accel_yLabel, "-");
+        updateLabel(accel_zLabel, "-");
+        updateLabel(bvpLabel, "calibrating");
+        updateLabel(edaLabel, "calibrating");
+        updateLabel(ibiLabel, "calibrating");
+        updateLabel(temperatureLabel, "calibrating");
+        updateLabel(heartLabel, "calibrating");
     }
 
     @Override

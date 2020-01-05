@@ -16,13 +16,17 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.EditText;
 import android.util.Log;
 
+import com.empatica.application.retrofit.IBackend;
+import com.empatica.application.retrofit.RetrofitClient;
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
 import com.empatica.empalink.EmpaticaDevice;
@@ -32,11 +36,30 @@ import com.empatica.empalink.config.EmpaStatus;
 import com.empatica.empalink.delegate.EmpaDataDelegate;
 import com.empatica.empalink.delegate.EmpaStatusDelegate;
 
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import retrofit2.Retrofit;
+
 public class MainActivity extends AppCompatActivity implements EmpaDataDelegate, EmpaStatusDelegate {
+    private CompositeDisposable compositeDisposable = new CompositeDisposable();
+    private IBackend backendAPI;
+
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
     private EmpaDeviceManager deviceManager = null;
+
+    private int participantID;
+    private int sessionID;
+    private float bvp;
+    private float eda;
+    private float ibi;
+    private float heartRate;
+    private float temperature;
 
     private TextView accel_xLabel;
     private TextView accel_yLabel;
@@ -54,6 +77,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Retrofit retrofit = RetrofitClient.getInstance();
+        backendAPI = retrofit.create(IBackend.class);
 
         statusLabel = findViewById(R.id.status);
         dataCnt = findViewById(R.id.dataArea);
@@ -81,7 +107,21 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             }
         });
 
-        initEmpaticaDeviceManager();
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+        alertBuilder.setTitle("Please Insert Participant Number");
+        final EditText participantIdInput = new EditText(this);
+        participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        alertBuilder.setView(participantIdInput);
+        alertBuilder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                participantID = Integer.parseInt(participantIdInput.getText().toString());
+                InsertAssociation(participantID);
+            }
+        });
+        alertBuilder.show();
+
+        //initEmpaticaDeviceManager();
     }
 
     @Override
@@ -151,6 +191,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     protected void onDestroy() {
         super.onDestroy();
         Log.d("CustomDebug", "Entering onDestroy");
+        compositeDisposable.clear();
         if (deviceManager != null) {
             deviceManager.cleanUp();
         }
@@ -158,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void didDiscoverDevice(EmpaticaDevice bluetoothDevice, String deviceName, int rssi, boolean allowed) {
+        Log.d("CustomDebug", "ParticipantID is " + participantID);
         if(allowed) {
             Log.d("CustomDebug", "Device is Allowed");
         } else {
@@ -206,6 +248,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
         if (status == EmpaStatus.READY) {
             updateLabel(statusLabel, status.name() + " - Turn on your device");
+            updateLabel(deviceNameLabel, "");
             Log.d("CustomDebug", "Device is ready");
             deviceManager.startScanning();
             hide();
@@ -309,6 +352,20 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 }
             }
         });
+    }
+
+    private void InsertAssociation(int value) {
+        compositeDisposable.add(backendAPI.InsertAssociation(value)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<String>() {
+                    @Override public void accept(String s) throws Exception {
+
+                    }}, new Consumer<Throwable>() {
+                    @Override public void accept(Throwable throwable) throws Exception {
+
+                    }
+                }));
     }
 
     void show() {

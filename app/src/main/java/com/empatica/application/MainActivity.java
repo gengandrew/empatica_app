@@ -24,9 +24,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.EditText;
 import android.util.Log;
+import io.reactivex.functions.Consumer;
 
 import com.empatica.application.retrofit.IBackend;
 import com.empatica.application.retrofit.RetrofitClient;
+import com.empatica.application.retrofit.SchedulerProvider;
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
 import com.empatica.empalink.EmpaticaDevice;
@@ -36,30 +38,22 @@ import com.empatica.empalink.config.EmpaStatus;
 import com.empatica.empalink.delegate.EmpaDataDelegate;
 import com.empatica.empalink.delegate.EmpaStatusDelegate;
 
-import io.reactivex.Observer;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.schedulers.Schedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import retrofit2.Retrofit;
-
 public class MainActivity extends AppCompatActivity implements EmpaDataDelegate, EmpaStatusDelegate {
-    private CompositeDisposable compositeDisposable = new CompositeDisposable();
-    private IBackend backendAPI;
-
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
     private EmpaDeviceManager deviceManager = null;
 
-    private int participantID;
-    private int sessionID;
-    private float bvp;
-    private float eda;
-    private float ibi;
-    private float heartRate;
-    private float temperature;
+    private Integer participantID = null;
+    private Integer sessionID = null;
+    private Float bvp = null;
+    private Float eda = null;
+    private Float ibi = null;
+    private Float heartRate = null;
+    private Float temperature = null;
+    private Integer accelX = null;
+    private Integer accelY = null;
+    private Integer accelZ = null;
 
     private TextView accel_xLabel;
     private TextView accel_yLabel;
@@ -77,9 +71,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        Retrofit retrofit = RetrofitClient.getInstance();
-        backendAPI = retrofit.create(IBackend.class);
 
         statusLabel = findViewById(R.id.status);
         dataCnt = findViewById(R.id.dataArea);
@@ -117,11 +108,36 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             public void onClick(DialogInterface dialog, int which) {
                 participantID = Integer.parseInt(participantIdInput.getText().toString());
                 InsertAssociation(participantID);
+                sessionID = participantID; //TODO: Need to programtically get sessionID instead
             }
         });
         alertBuilder.show();
 
-        //initEmpaticaDeviceManager();
+        initEmpaticaDeviceManager();
+    }
+
+    private void initEmpaticaDeviceManager() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, REQUEST_PERMISSION_ACCESS_COARSE_LOCATION);
+        } else {
+            if (TextUtils.isEmpty(EMPATICA_API_KEY)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Warning")
+                        .setMessage("Please insert your API KEY")
+                        .setNegativeButton("Close", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        })
+                        .show();
+                return;
+            }
+
+            clearLabels();
+            deviceManager = new EmpaDeviceManager(getApplicationContext(), this, this);
+            deviceManager.authenticateWithAPIKey(EMPATICA_API_KEY);
+            Log.d("CustomDebug", "Authentication with key is complete");
+        }
     }
 
     @Override
@@ -153,53 +169,18 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         }
     }
 
-    private void initEmpaticaDeviceManager() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, REQUEST_PERMISSION_ACCESS_COARSE_LOCATION);
-        } else {
-            if (TextUtils.isEmpty(EMPATICA_API_KEY)) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Warning")
-                        .setMessage("Please insert your API KEY")
-                        .setNegativeButton("Close", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                // without permission exit is the only way
-                                finish();
-                            }
-                        })
-                        .show();
-                return;
-            }
-
-            clearLabels();
-            deviceManager = new EmpaDeviceManager(getApplicationContext(), this, this);
-            deviceManager.authenticateWithAPIKey(EMPATICA_API_KEY);
-            Log.d("CustomDebug", "Authentication with key is complete");
-        }
-    }
-
     @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d("CustomDebug", "Entering onPause");
-        if (deviceManager != null) {
-            deviceManager.stopScanning();
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
+            // TODO: Deal with bluetooth permission is still denied
+            Log.d("CustomDebug", "Bluetooth is not enabled");
+            return;
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d("CustomDebug", "Entering onDestroy");
-        compositeDisposable.clear();
-        if (deviceManager != null) {
-            deviceManager.cleanUp();
-        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
     public void didDiscoverDevice(EmpaticaDevice bluetoothDevice, String deviceName, int rssi, boolean allowed) {
-        Log.d("CustomDebug", "ParticipantID is " + participantID);
         if(allowed) {
             Log.d("CustomDebug", "Device is Allowed");
         } else {
@@ -223,16 +204,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didRequestEnableBluetooth() {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
         startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
-            // TODO: Deal with bluetooth permission is still denied
-            Log.d("CustomDebug", "Bluetooth is not enabled");
-            return;
-        }
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -263,17 +234,14 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     @Override
-    public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
-        Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
-        updateLabel(accel_xLabel, Integer.toString(x));
-        updateLabel(accel_yLabel, Integer.toString(y));
-        updateLabel(accel_zLabel, Integer.toString(z));
+    public void didEstablishConnection() {
+        Log.d("CustomDebug", "Connection has been established");
+        show();
     }
 
     @Override
-    public void didReceiveBVP(float bvp, double timestamp) {
-        Log.d("CustomDebug", "BVP is [" + bvp + "]");
-        updateLabel(bvpLabel, Float.toString(bvp));
+    public void didReceiveTag(double timestamp) {
+        Log.d("CustomDebug", "Tag is [" + timestamp + "]");
     }
 
     @Override
@@ -282,23 +250,79 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     @Override
+    public void didReceiveBVP(float bvp, double timestamp) {
+        Log.d("CustomDebug", "BVP is [" + bvp + "]");
+        this.bvp = bvp;
+        if(checkDataPostConditions()) {
+            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+        }
+        updateLabel(bvpLabel, Float.toString(bvp));
+    }
+
+    @Override
     public void didReceiveGSR(float gsr, double timestamp) {
         Log.d("CustomDebug", "GSR is [" + gsr + "]");
+        this.eda = gsr;
+        if(checkDataPostConditions()) {
+            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+        }
         updateLabel(edaLabel, Float.toString(gsr));
     }
 
     @Override
     public void didReceiveIBI(float ibi, double timestamp) {
         Log.d("CustomDebug", "IBI is [" + ibi + "]");
+        this.ibi = ibi;
+        this.heartRate = 60/ibi;
+        if(checkDataPostConditions()) {
+            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+        }
         updateLabel(ibiLabel, Float.toString(ibi));
-        float heartRate = 60/ibi;
         updateLabel(heartLabel, Float.toString(heartRate));
     }
 
     @Override
     public void didReceiveTemperature(float temp, double timestamp) {
         Log.d("CustomDebug", "Temperature is [" + temp + "]");
+        this.temperature = temp;
+        if(checkDataPostConditions()) {
+            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+        }
         updateLabel(temperatureLabel, Float.toString(temp));
+    }
+
+    @Override
+    public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
+        Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
+        accelX = x;
+        accelY = y;
+        accelZ = z;
+        if(checkAccelPostConditions()) {
+            InsertAcceleration(this.sessionID, timestamp, this.accelX, this.accelY, this.accelZ);
+        }
+        updateLabel(accel_xLabel, Integer.toString(accelX));
+        updateLabel(accel_yLabel, Integer.toString(accelY));
+        updateLabel(accel_zLabel, Integer.toString(accelZ));
+    }
+
+    @Override
+    public void didUpdateOnWristStatus(@EmpaSensorStatus final int status) {
+        if(status == EmpaSensorStatus.ON_WRIST) {
+            Log.d("CustomDebug", "Wrist Status is [On Wrist]");
+        } else {
+            Log.d("CustomDebug", "Wrist Status is [Not On Wrist]");
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (status == EmpaSensorStatus.ON_WRIST) {
+                    ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.on_wrist);
+                }
+                else {
+                    ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.not_on_wrist);
+                }
+            }
+        });
     }
 
     private void updateLabel(final TextView label, final String text) {
@@ -323,49 +347,75 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         updateLabel(heartLabel, "calibrating");
     }
 
-    @Override
-    public void didReceiveTag(double timestamp) {
-        Log.d("CustomDebug", "Tag is [" + timestamp + "]");
-    }
-
-    @Override
-    public void didEstablishConnection() {
-        Log.d("CustomDebug", "Connection has been established");
-        show();
-    }
-
-    @Override
-    public void didUpdateOnWristStatus(@EmpaSensorStatus final int status) {
-        if(status == EmpaSensorStatus.ON_WRIST) {
-            Log.d("CustomDebug", "Wrist Status is [On Wrist]");
-        } else {
-            Log.d("CustomDebug", "Wrist Status is [Not On Wrist]");
+    private boolean checkDataPostConditions() {
+        if(sessionID != null && bvp != null && eda != null && ibi != null
+                && heartRate != null && temperature != null) {
+            return true;
         }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (status == EmpaSensorStatus.ON_WRIST) {
-                    ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.on_wrist);
-                }
-                else {
-                    ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.not_on_wrist);
-                }
-            }
-        });
+        return false;
+    }
+
+    private boolean checkAccelPostConditions() {
+        if(sessionID != null && accelX != null && accelY != null && accelZ != null) {
+            return true;
+        }
+        return false;
     }
 
     private void InsertAssociation(int value) {
-        compositeDisposable.add(backendAPI.InsertAssociation(value)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        IBackend backendService = RetrofitClient.getService();
+        backendService.InsertAssociation(value)
+                .subscribeOn(SchedulerProvider.IOThread())
+                .observeOn(SchedulerProvider.UIThread())
                 .subscribe(new Consumer<String>() {
-                    @Override public void accept(String s) throws Exception {
-
-                    }}, new Consumer<Throwable>() {
-                    @Override public void accept(Throwable throwable) throws Exception {
-
+                    @Override
+                    public void accept(String input) throws Exception {
+                        Log.d("CustomDebug", "InsertAssoication request has been made!");
                     }
-                }));
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
+                    }
+                });
+    }
+
+    private void InsertData(int sessionID, double e4Time, float bvp, float eda,
+                            float ibi, float heartRate, float temperature) {
+        IBackend backendService = RetrofitClient.getService();
+        backendService.InsertData(sessionID, e4Time, bvp, eda, ibi, heartRate, temperature)
+                .subscribeOn(SchedulerProvider.IOThread())
+                .observeOn(SchedulerProvider.UIThread())
+                .subscribe(new Consumer<String>() {
+                    @Override
+                    public void accept(String input) throws Exception {
+                        Log.d("CustomDebug", "InsertData request has been made!");
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
+                    }
+                });
+    }
+
+    private void InsertAcceleration(int sessionID, double e4Time, float accelX,
+                                    float accelY, float accelZ) {
+        IBackend backendService = RetrofitClient.getService();
+        backendService.InsertAcceleration(sessionID, e4Time, accelX, accelY, accelZ)
+                .subscribeOn(SchedulerProvider.IOThread())
+                .observeOn(SchedulerProvider.UIThread())
+                .subscribe(new Consumer<String>() {
+                    @Override
+                    public void accept(String input) throws Exception {
+                        Log.d("CustomDebug", "InsertData request has been made!");
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
+                    }
+                });
     }
 
     void show() {
@@ -384,5 +434,23 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 dataCnt.setVisibility(View.INVISIBLE);
             }
         });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d("CustomDebug", "Entering onPause");
+        if (deviceManager != null) {
+            deviceManager.stopScanning();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d("CustomDebug", "Entering onDestroy");
+        if (deviceManager != null) {
+            deviceManager.cleanUp();
+        }
     }
 }

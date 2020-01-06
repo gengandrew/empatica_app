@@ -4,14 +4,15 @@ import io.reactivex.Observable;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.POST;
+import retrofit2.http.GET;
 
 public interface IBackend {
 
-    @POST("./")
+    @POST("InsertAssociation")
     @FormUrlEncoded
     Observable<String> InsertAssociation(@Field("participantID") int participantID);
 
-    @POST("./")
+    @POST("InsertData")
     @FormUrlEncoded
     Observable<String> InsertData(@Field("sessionID") int sessionID,
                                   @Field("e4Time") double e4Time,
@@ -21,7 +22,7 @@ public interface IBackend {
                                   @Field("heartRate") float heartRate,
                                   @Field("temperature") float temperature);
 
-    @POST("./")
+    @POST("InsertAcceleration")
     @FormUrlEncoded
     Observable<String> InsertAcceleration(@Field("sessionID") int sessionID,
                                           @Field("e4Time") double e4Time,

@@ -25,8 +25,12 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.util.Log;
 import io.reactivex.functions.Consumer;
+import retrofit2.Call;
+import retrofit2.Callback;
+import java.lang.Math;
 
 import com.empatica.application.retrofit.IBackend;
+import com.empatica.application.retrofit.CallResponse;
 import com.empatica.application.retrofit.RetrofitClient;
 import com.empatica.application.retrofit.SchedulerProvider;
 import com.empatica.empalink.ConnectionNotAllowedException;
@@ -54,6 +58,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private Integer accelX = null;
     private Integer accelY = null;
     private Integer accelZ = null;
+    private Integer ACCEL_DEVIATION = 10;
 
     private TextView accel_xLabel;
     private TextView accel_yLabel;
@@ -94,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                     deviceManager.cleanUp();
                     deviceManager = null;
                 }
-                initEmpaticaDeviceManager();
+                initDeviceManager();
             }
         });
 
@@ -109,14 +114,15 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 participantID = Integer.parseInt(participantIdInput.getText().toString());
                 InsertAssociation(participantID);
                 sessionID = participantID; //TODO: Need to programtically get sessionID instead
+                //GrabSessionID(participantID);
             }
         });
         alertBuilder.show();
 
-        initEmpaticaDeviceManager();
+        initDeviceManager();
     }
 
-    private void initEmpaticaDeviceManager() {
+    private void initDeviceManager() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, REQUEST_PERMISSION_ACCESS_COARSE_LOCATION);
         } else {
@@ -144,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(requestCode == REQUEST_PERMISSION_ACCESS_COARSE_LOCATION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initEmpaticaDeviceManager();
+                initDeviceManager();
             } else {
                 final boolean needRationale = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION);
                 new AlertDialog.Builder(this).setTitle("Permission required")
@@ -152,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                         .setPositiveButton("Retry", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
                                 if (needRationale) {
-                                    initEmpaticaDeviceManager();
+                                    initDeviceManager();
                                 } else {
                                     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                                     Uri uri = Uri.fromParts("package", getPackageName(), null);
@@ -294,12 +300,12 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
         Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
-        accelX = x;
-        accelY = y;
-        accelZ = z;
-        if(checkAccelPostConditions()) {
-            InsertAcceleration(this.sessionID, timestamp, this.accelX, this.accelY, this.accelZ);
+        if(checkAccelPostConditions(x, y, z)) {
+            InsertAcceleration(this.sessionID, timestamp, x, y, z);
         }
+        this.accelX = x;
+        this.accelY = y;
+        this.accelZ = z;
         updateLabel(accel_xLabel, Integer.toString(accelX));
         updateLabel(accel_yLabel, Integer.toString(accelY));
         updateLabel(accel_zLabel, Integer.toString(accelZ));
@@ -317,8 +323,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             public void run() {
                 if (status == EmpaSensorStatus.ON_WRIST) {
                     ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.on_wrist);
-                }
-                else {
+                } else {
                     ((TextView)findViewById(R.id.wrist_status_label)).setText(R.string.not_on_wrist);
                 }
             }
@@ -355,11 +360,15 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         return false;
     }
 
-    private boolean checkAccelPostConditions() {
-        if(sessionID != null && accelX != null && accelY != null && accelZ != null) {
+    private boolean checkAccelPostConditions(int x, int y, int z) {
+        if(this.accelX == null || this.accelY == null || this.accelZ == null) {
             return true;
+        } else if(Math.abs(this.accelX - x) > ACCEL_DEVIATION || Math.abs(this.accelY - y) > ACCEL_DEVIATION
+                || Math.abs(this.accelZ - z) > ACCEL_DEVIATION) {
+            return true;
+        } else {
+            return false;
         }
-        return false;
     }
 
     private void InsertAssociation(int value) {
@@ -416,6 +425,32 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                         throwable.printStackTrace();
                     }
                 });
+    }
+
+    private void GrabSessionID(int participantID) {
+        Log.d("CustomDebug", "Going to grab sessionID");
+        IBackend backendService = RetrofitClient.getService();
+        Call<CallResponse> call = backendService.getSessionID(participantID);
+        call.enqueue(new Callback<CallResponse>() {
+            @Override
+            public void onResponse(Call<CallResponse> call, retrofit2.Response<CallResponse> response) {
+                Log.d("CustomDebug", "Going to on Response");
+                if(response.isSuccessful()) {
+                    Log.d("CustomDebug", "Obtains a response of " + response.body().toString());
+                    int ret = response.body().getSessionID();
+                    Log.d("CustomDebug", "Get response is successful " + ret);
+                } else {
+                    Log.d("CustomDebug", "Going to on not successful response");
+                    Toast.makeText(MainActivity.this, "Failure to get response from GetSessionID", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CallResponse> call, Throwable t) {
+                Log.d("CustomDebug", "Going to on Failure");
+                Toast.makeText(MainActivity.this, "GetSessionID returns from onFailure", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     void show() {

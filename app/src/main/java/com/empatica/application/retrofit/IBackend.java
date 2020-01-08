@@ -1,13 +1,13 @@
 package com.empatica.application.retrofit;
 
+import java.util.List;
 import io.reactivex.Observable;
+import retrofit2.Call;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.POST;
-import retrofit2.http.GET;
 
 public interface IBackend {
-
     @POST("InsertAssociation")
     @FormUrlEncoded
     Observable<String> InsertAssociation(@Field("participantID") int participantID);
@@ -29,4 +29,8 @@ public interface IBackend {
                                           @Field("accelX") float accelX,
                                           @Field("accelY") float accelY,
                                           @Field("accelZ") float accelZ);
+
+    @POST("getSessionID")
+    @FormUrlEncoded
+    Call<CallResponse> getSessionID(@Field("participantID") int participantID);
 }

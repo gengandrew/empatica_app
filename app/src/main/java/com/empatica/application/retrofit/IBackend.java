@@ -1,6 +1,5 @@
 package com.empatica.application.retrofit;
 
-import java.util.List;
 import io.reactivex.Observable;
 import retrofit2.Call;
 import retrofit2.http.Field;
@@ -15,6 +14,7 @@ public interface IBackend {
     @POST("InsertData")
     @FormUrlEncoded
     Observable<String> InsertData(@Field("sessionID") int sessionID,
+                                  @Field("utc") String utc,
                                   @Field("e4Time") double e4Time,
                                   @Field("bvp") float bvp,
                                   @Field("eda") float eda,
@@ -25,6 +25,7 @@ public interface IBackend {
     @POST("InsertAcceleration")
     @FormUrlEncoded
     Observable<String> InsertAcceleration(@Field("sessionID") int sessionID,
+                                          @Field("utc") String utc,
                                           @Field("e4Time") double e4Time,
                                           @Field("accelX") float accelX,
                                           @Field("accelY") float accelY,

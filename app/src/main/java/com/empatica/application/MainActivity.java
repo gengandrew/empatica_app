@@ -263,9 +263,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         this.bvp = bvp;
         if(checkDataPostConditions()) {
             // TODO: Fix this timestamp issue!
-            String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
-            Log.d("CustomDebug", "Current time is " + time);
-            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
         updateLabel(bvpLabel, Float.toString(bvp));
     }
@@ -275,7 +274,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         Log.d("CustomDebug", "GSR is [" + gsr + "]");
         this.eda = gsr;
         if(checkDataPostConditions()) {
-            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
         updateLabel(edaLabel, Float.toString(gsr));
     }
@@ -286,7 +286,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         this.ibi = ibi;
         this.heartRate = 60/ibi;
         if(checkDataPostConditions()) {
-            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
         updateLabel(ibiLabel, Float.toString(ibi));
         updateLabel(heartLabel, Float.toString(heartRate));
@@ -297,7 +298,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         Log.d("CustomDebug", "Temperature is [" + temp + "]");
         this.temperature = temp;
         if(checkDataPostConditions()) {
-            InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
         updateLabel(temperatureLabel, Float.toString(temp));
     }
@@ -306,7 +308,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
         Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
         if(checkAccelPostConditions(x, y, z)) {
-            InsertAcceleration(this.sessionID, timestamp, x, y, z);
+            InsertAcceleration(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                    timestamp, x, y, z);
         }
         this.accelX = x;
         this.accelY = y;
@@ -394,10 +397,10 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 });
     }
 
-    private void InsertData(int sessionID, double e4Time, float bvp, float eda,
+    private void InsertData(int sessionID, String utc, double e4Time, float bvp, float eda,
                             float ibi, float heartRate, float temperature) {
         IBackend backendService = RetrofitClient.getService();
-        backendService.InsertData(sessionID, e4Time, bvp, eda, ibi, heartRate, temperature)
+        backendService.InsertData(sessionID, utc, e4Time, bvp, eda, ibi, heartRate, temperature)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())
                 .subscribe(new Consumer<String>() {
@@ -413,10 +416,10 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 });
     }
 
-    private void InsertAcceleration(int sessionID, double e4Time, float accelX,
+    private void InsertAcceleration(int sessionID, String utc, double e4Time, float accelX,
                                     float accelY, float accelZ) {
         IBackend backendService = RetrofitClient.getService();
-        backendService.InsertAcceleration(sessionID, e4Time, accelX, accelY, accelZ)
+        backendService.InsertAcceleration(sessionID, utc, e4Time, accelX, accelY, accelZ)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())
                 .subscribe(new Consumer<String>() {

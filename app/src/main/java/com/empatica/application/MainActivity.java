@@ -28,6 +28,8 @@ import io.reactivex.functions.Consumer;
 import retrofit2.Call;
 import retrofit2.Callback;
 import java.lang.Math;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import com.empatica.application.retrofit.IBackend;
 import com.empatica.application.retrofit.CallResponse;
@@ -260,6 +262,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         Log.d("CustomDebug", "BVP is [" + bvp + "]");
         this.bvp = bvp;
         if(checkDataPostConditions()) {
+            // TODO: Fix this timestamp issue!
+            String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+            Log.d("CustomDebug", "Current time is " + time);
             InsertData(this.sessionID, timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
         updateLabel(bvpLabel, Float.toString(bvp));

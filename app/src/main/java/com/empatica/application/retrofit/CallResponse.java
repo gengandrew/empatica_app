@@ -1,14 +1,12 @@
 package com.empatica.application.retrofit;
 
-import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 public class CallResponse {
-    @SerializedName("SessionID")
-    @Expose
-    private Integer sessionID;
+    @SerializedName("sessionID")
+    private int sessionID;
 
-    public Integer getSessionID() {
+    public int getSessionID() {
         return sessionID;
     }
 }

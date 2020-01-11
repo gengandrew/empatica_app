@@ -9,7 +9,7 @@ import retrofit2.http.POST;
 public interface IBackend {
     @POST("InsertAssociation")
     @FormUrlEncoded
-    Observable<String> InsertAssociation(@Field("participantID") int participantID);
+    Call<CallResponse> InsertAssociation(@Field("participantID") int participantID);
 
     @POST("InsertData")
     @FormUrlEncoded
@@ -30,8 +30,4 @@ public interface IBackend {
                                           @Field("accelX") float accelX,
                                           @Field("accelY") float accelY,
                                           @Field("accelZ") float accelZ);
-
-    @POST("getSessionID")
-    @FormUrlEncoded
-    Call<CallResponse> getSessionID(@Field("participantID") int participantID);
 }

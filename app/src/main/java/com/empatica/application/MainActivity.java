@@ -114,13 +114,11 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             public void onClick(DialogInterface dialog, int which) {
                 participantID = Integer.parseInt(participantIdInput.getText().toString());
                 InsertAssociation(participantID);
-                sessionID = participantID; //TODO: Need to programtically get sessionID instead
-                GrabSessionID(participantID);
             }
         });
         alertBuilder.show();
 
-        //initDeviceManager();
+        initDeviceManager();
     }
 
     private void initDeviceManager() {
@@ -188,12 +186,13 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void didDiscoverDevice(EmpaticaDevice bluetoothDevice, String deviceName, int rssi, boolean allowed) {
+        Log.d("CustomDebug", "As of this instance sessionId is " + sessionID);
         if(allowed) {
             Log.d("CustomDebug", "Device is Allowed");
         } else {
             Log.d("CustomDebug", "Device is Not Allowed");
         }
-        if (allowed) {
+        if(allowed) {
             deviceManager.stopScanning();
             try {
                 deviceManager.connectDevice(bluetoothDevice);
@@ -261,7 +260,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         Log.d("CustomDebug", "BVP is [" + bvp + "]");
         this.bvp = bvp;
         if(checkDataPostConditions()) {
-            // TODO: Fix this timestamp issue!
             InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
         }
@@ -368,7 +366,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     private boolean checkAccelPostConditions(int x, int y, int z) {
-        if(this.accelX == null || this.accelY == null || this.accelZ == null) {
+        if(this.sessionID == null) {
+            return false;
+        } else if(this.accelX == null || this.accelY == null || this.accelZ == null) {
             return true;
         } else if(Math.abs(this.accelX - x) > ACCEL_DEVIATION || Math.abs(this.accelY - y) > ACCEL_DEVIATION
                 || Math.abs(this.accelZ - z) > ACCEL_DEVIATION) {
@@ -380,20 +380,27 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     private void InsertAssociation(int value) {
         IBackend backendService = RetrofitClient.getService();
-        backendService.InsertAssociation(value)
-                .subscribeOn(SchedulerProvider.IOThread())
-                .observeOn(SchedulerProvider.UIThread())
-                .subscribe(new Consumer<String>() {
-                    @Override
-                    public void accept(String input) throws Exception {
-                        Log.d("CustomDebug", "InsertAssoication request has been made!");
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        throwable.printStackTrace();
-                    }
-                });
+        Call<CallResponse> call = backendService.InsertAssociation(value);
+        call.enqueue(new Callback<CallResponse>() {
+            @Override
+            public void onResponse(Call<CallResponse> call, retrofit2.Response<CallResponse> response) {
+                Log.d("CustomDebug", "Going to on Response");
+                if(response.isSuccessful()) {
+                    sessionID = response.body().getSessionID();
+                    Log.d("CustomDebug", "Internal sessionID has been set as " + sessionID);
+                } else {
+                    Log.d("CustomDebug", "Going to on not successful response");
+                    Toast.makeText(MainActivity.this, "Failure to get response from GetSessionID", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CallResponse> call, Throwable t) {
+                Log.d("CustomDebug", "Going to on Failure");
+                Log.d("CustomDebug", t.toString());
+                Toast.makeText(MainActivity.this, "GetSessionID returns from onFailure", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void InsertData(int sessionID, String utc, double e4Time, float bvp, float eda,
@@ -432,33 +439,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                         throwable.printStackTrace();
                     }
                 });
-    }
-
-    private void GrabSessionID(int participantID) {
-        Log.d("CustomDebug", "Going to grab sessionID");
-        IBackend backendService = RetrofitClient.getService();
-        Call<CallResponse> call = backendService.getSessionID(participantID);
-        call.enqueue(new Callback<CallResponse>() {
-            @Override
-            public void onResponse(Call<CallResponse> call, retrofit2.Response<CallResponse> response) {
-                Log.d("CustomDebug", "Going to on Response");
-                if(response.isSuccessful()) {
-                    Log.d("CustomDebug", "Obtains a response of " + response.body().getSessionID() + " with response code of " + response.code());
-                    int ret = response.body().getSessionID();
-                    Log.d("CustomDebug", "Get response is successful " + ret);
-                } else {
-                    Log.d("CustomDebug", "Going to on not successful response");
-                    Toast.makeText(MainActivity.this, "Failure to get response from GetSessionID", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<CallResponse> call, Throwable t) {
-                Log.d("CustomDebug", "Going to on Failure");
-                Log.d("CustomDebug", t.toString());
-                Toast.makeText(MainActivity.this, "GetSessionID returns from onFailure", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     void show() {

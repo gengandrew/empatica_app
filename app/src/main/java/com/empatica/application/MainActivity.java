@@ -45,10 +45,10 @@ import com.empatica.empalink.delegate.EmpaDataDelegate;
 import com.empatica.empalink.delegate.EmpaStatusDelegate;
 
 public class MainActivity extends AppCompatActivity implements EmpaDataDelegate, EmpaStatusDelegate {
-    private static final int REQUEST_ENABLE_BT = 1;
-    private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
     private EmpaDeviceManager deviceManager = null;
+    private static final int PERMISSION_CODE = 1;
+    private Integer ACCEL_DEVIATION = 10;
 
     private Integer participantID = null;
     private Integer sessionID = null;
@@ -60,7 +60,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private Integer accelX = null;
     private Integer accelY = null;
     private Integer accelZ = null;
-    private Integer ACCEL_DEVIATION = 10;
 
     private TextView accel_xLabel;
     private TextView accel_yLabel;
@@ -116,17 +115,17 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 participantID = Integer.parseInt(participantIdInput.getText().toString());
                 InsertAssociation(participantID);
                 sessionID = participantID; //TODO: Need to programtically get sessionID instead
-                //GrabSessionID(participantID);
+                GrabSessionID(participantID);
             }
         });
         alertBuilder.show();
 
-        initDeviceManager();
+        //initDeviceManager();
     }
 
     private void initDeviceManager() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, REQUEST_PERMISSION_ACCESS_COARSE_LOCATION);
+            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, PERMISSION_CODE);
         } else {
             if (TextUtils.isEmpty(EMPATICA_API_KEY)) {
                 new AlertDialog.Builder(this)
@@ -150,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if(requestCode == REQUEST_PERMISSION_ACCESS_COARSE_LOCATION) {
+        if(requestCode == PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 initDeviceManager();
             } else {
@@ -179,7 +178,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
+        if (requestCode == PERMISSION_CODE && resultCode == Activity.RESULT_CANCELED) {
             // TODO: Deal with bluetooth permission is still denied
             Log.d("CustomDebug", "Bluetooth is not enabled");
             return;
@@ -211,7 +210,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didRequestEnableBluetooth() {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        startActivityForResult(enableBtIntent, PERMISSION_CODE);
     }
 
     @Override
@@ -444,7 +443,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             public void onResponse(Call<CallResponse> call, retrofit2.Response<CallResponse> response) {
                 Log.d("CustomDebug", "Going to on Response");
                 if(response.isSuccessful()) {
-                    Log.d("CustomDebug", "Obtains a response of " + response.body().toString());
+                    Log.d("CustomDebug", "Obtains a response of " + response.body().getSessionID() + " with response code of " + response.code());
                     int ret = response.body().getSessionID();
                     Log.d("CustomDebug", "Get response is successful " + ret);
                 } else {
@@ -456,6 +455,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             @Override
             public void onFailure(Call<CallResponse> call, Throwable t) {
                 Log.d("CustomDebug", "Going to on Failure");
+                Log.d("CustomDebug", t.toString());
                 Toast.makeText(MainActivity.this, "GetSessionID returns from onFailure", Toast.LENGTH_SHORT).show();
             }
         });

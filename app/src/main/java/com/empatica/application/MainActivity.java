@@ -177,8 +177,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PERMISSION_CODE && resultCode == Activity.RESULT_CANCELED) {
-            // TODO: Deal with bluetooth permission is still denied
             Log.d("CustomDebug", "Bluetooth is not enabled");
+            Toast.makeText(MainActivity.this, "Bluetooth is not enabled, exiting application", Toast.LENGTH_SHORT).show();
+            System.exit(1);
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);

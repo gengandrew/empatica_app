@@ -31,10 +31,7 @@ import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import com.empatica.application.retrofit.IBackend;
-import com.empatica.application.retrofit.CallResponse;
-import com.empatica.application.retrofit.RetrofitClient;
-import com.empatica.application.retrofit.SchedulerProvider;
+import com.empatica.application.retrofit.*;
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
 import com.empatica.empalink.EmpaticaDevice;
@@ -49,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private EmpaDeviceManager deviceManager = null;
     private static final int PERMISSION_CODE = 1;
     private Integer ACCEL_DEVIATION = 10;
+    private RetrofitClient backendClient;
 
     private Integer participantID = null;
     private Integer sessionID = null;
@@ -77,6 +75,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        backendClient = new RetrofitClient();
 
         statusLabel = findViewById(R.id.status);
         dataCnt = findViewById(R.id.dataArea);
@@ -379,7 +379,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     private void InsertAssociation(int value) {
-        IBackend backendService = RetrofitClient.getService();
+        IBackend backendService = backendClient.getService();
         Call<CallResponse> call = backendService.InsertAssociation(value);
         call.enqueue(new Callback<CallResponse>() {
             @Override
@@ -405,7 +405,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     private void InsertData(int sessionID, String utc, double e4Time, float bvp, float eda,
                             float ibi, float heartRate, float temperature) {
-        IBackend backendService = RetrofitClient.getService();
+        IBackend backendService = backendClient.getService();
         backendService.InsertData(sessionID, utc, e4Time, bvp, eda, ibi, heartRate, temperature)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())
@@ -424,7 +424,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     private void InsertAcceleration(int sessionID, String utc, double e4Time, float accelX,
                                     float accelY, float accelZ) {
-        IBackend backendService = RetrofitClient.getService();
+        IBackend backendService = backendClient.getService();
         backendService.InsertAcceleration(sessionID, utc, e4Time, accelX, accelY, accelZ)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())

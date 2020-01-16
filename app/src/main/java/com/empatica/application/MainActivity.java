@@ -222,8 +222,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didUpdateStatus(EmpaStatus status) {
         updateLabel(statusLabel, status.name());
-        Log.d("CustomDebug", "Entering didUpdateStatus function");
-
         if (status == EmpaStatus.READY) {
             updateLabel(statusLabel, status.name() + " - Turn on your device");
             updateLabel(deviceNameLabel, "");
@@ -337,7 +335,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     private void updateLabel(final TextView label, final String text) {
-        Log.d("CustomDebug", "Label update is [" + text + "]");
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

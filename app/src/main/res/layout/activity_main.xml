@@ -13,9 +13,10 @@
         android:layout_height="36dp"/>
 
     <TextView
-        android:id="@+id/deviceName"
+        android:id="@+id/session_label"
         android:layout_width="match_parent"
-        android:layout_height="36dp"/>
+        android:layout_height="36dp"
+        android:text="@string/calibrating_text"/>
 
     <LinearLayout
         android:id="@+id/dataArea"

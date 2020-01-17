@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private TextView temperatureLabel;
     private TextView heartLabel;
     private TextView statusLabel;
-    private TextView deviceNameLabel;
+    private TextView sessionLabel;
     private LinearLayout dataCnt;
 
     @Override
@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         ibiLabel = findViewById(R.id.ibi);
         temperatureLabel = findViewById(R.id.temperature);
         heartLabel = findViewById(R.id.heart);
-        deviceNameLabel = findViewById(R.id.deviceName);
+        sessionLabel = findViewById(R.id.session_label);
 
         final Button disconnectButton = findViewById(R.id.disconnectButton);
         disconnectButton.setOnClickListener(new View.OnClickListener() {
@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
         alertBuilder.setTitle("Please Insert Participant Number");
+        alertBuilder.setCancelable(false);
         final EditText participantIdInput = new EditText(this);
         participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
         alertBuilder.setView(participantIdInput);
@@ -197,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             deviceManager.stopScanning();
             try {
                 deviceManager.connectDevice(bluetoothDevice);
-                updateLabel(deviceNameLabel, "To: " + deviceName);
+                //updateLabel(deviceNameLabel, "To: " + deviceName);
                 BluetoothDevice bd = deviceManager.getActiveDevice();
                 Log.d("CustomDebug", "Connected to device is named [" + bd.getName() + "] with address [" + bd.getAddress() + "]");
             } catch (ConnectionNotAllowedException e) {
@@ -224,7 +225,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         updateLabel(statusLabel, status.name());
         if (status == EmpaStatus.READY) {
             updateLabel(statusLabel, status.name() + " - Turn on your device");
-            updateLabel(deviceNameLabel, "");
             Log.d("CustomDebug", "Device is ready");
             deviceManager.startScanning();
             hide();
@@ -232,8 +232,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             Log.d("CustomDebug", "Device is Connected");
             show();
         } else if (status == EmpaStatus.DISCONNECTED) {
-            Log.d("CustomDebug", "Device is Disconnect with count");
-            updateLabel(deviceNameLabel, " The Device is disconnected");
+            Log.d("CustomDebug", "Device is Disconnect");
             hide();
         }
     }
@@ -256,34 +255,34 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void didReceiveBVP(float bvp, double timestamp) {
-        Log.d("CustomDebug", "BVP is [" + bvp + "]");
         this.bvp = bvp;
         if(checkDataPostConditions()) {
             InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            Log.d("CustomDebug", "BVP of [" + bvp + "] has been pushed");
         }
         updateLabel(bvpLabel, Float.toString(bvp));
     }
 
     @Override
     public void didReceiveGSR(float gsr, double timestamp) {
-        Log.d("CustomDebug", "GSR is [" + gsr + "]");
         this.eda = gsr;
         if(checkDataPostConditions()) {
             InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            Log.d("CustomDebug", "GSR of [" + gsr + "] has been pushed");
         }
         updateLabel(edaLabel, Float.toString(gsr));
     }
 
     @Override
     public void didReceiveIBI(float ibi, double timestamp) {
-        Log.d("CustomDebug", "IBI is [" + ibi + "]");
         this.ibi = ibi;
         this.heartRate = 60/ibi;
         if(checkDataPostConditions()) {
             InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            Log.d("CustomDebug", "IBI of [" + ibi + "] has been pushed");
         }
         updateLabel(ibiLabel, Float.toString(ibi));
         updateLabel(heartLabel, Float.toString(heartRate));
@@ -291,21 +290,21 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void didReceiveTemperature(float temp, double timestamp) {
-        Log.d("CustomDebug", "Temperature is [" + temp + "]");
         this.temperature = temp;
         if(checkDataPostConditions()) {
             InsertData(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+            Log.d("CustomDebug", "Temperature of [" + temp + "] has been pushed");
         }
         updateLabel(temperatureLabel, Float.toString(temp));
     }
 
     @Override
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
-        Log.d("CustomDebug", "Acceleration is [" + x+y+z + "]");
         if(checkAccelPostConditions(x, y, z)) {
             InsertAcceleration(this.sessionID, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                     timestamp, x, y, z);
+            Log.d("CustomDebug", "Acceleration of [" + x + " " + y + " " + z + "] has been pushed");
         }
         this.accelX = x;
         this.accelY = y;
@@ -344,7 +343,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     private void clearLabels() {
-        updateLabel(deviceNameLabel, "");
         updateLabel(accel_xLabel, "-");
         updateLabel(accel_yLabel, "-");
         updateLabel(accel_zLabel, "-");
@@ -385,10 +383,12 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 Log.d("CustomDebug", "Going to on Response");
                 if(response.isSuccessful()) {
                     sessionID = response.body().getSessionID();
+                    updateLabel(sessionLabel, "Current session has ID of [" + sessionID.toString() + "]");
                     Log.d("CustomDebug", "Internal sessionID has been set as " + sessionID);
                 } else {
                     Log.d("CustomDebug", "Going to on not successful response");
-                    Toast.makeText(MainActivity.this, "Failure to get response from GetSessionID", Toast.LENGTH_SHORT).show();
+                    updateLabel(sessionLabel, "onResponse failure from InsertAssociation [please try again]");
+                    Toast.makeText(MainActivity.this, "Failure to get response from InsertAssociation", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -396,7 +396,8 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             public void onFailure(Call<CallResponse> call, Throwable t) {
                 Log.d("CustomDebug", "Going to on Failure");
                 Log.d("CustomDebug", t.toString());
-                Toast.makeText(MainActivity.this, "GetSessionID returns from onFailure", Toast.LENGTH_SHORT).show();
+                updateLabel(sessionLabel, "onFailure from InsertAssociation [please try again]");
+                Toast.makeText(MainActivity.this, "InsertAssociation returns to onFailure", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -443,6 +444,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                sessionLabel.setVisibility(View.VISIBLE);
                 dataCnt.setVisibility(View.VISIBLE);
             }
         });
@@ -452,6 +454,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                sessionLabel.setVisibility(View.INVISIBLE);
                 dataCnt.setVisibility(View.INVISIBLE);
             }
         });

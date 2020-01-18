@@ -10,7 +10,7 @@ public class SchedulerProvider {
         return AndroidSchedulers.mainThread();
     }
 
-    // Input output thread
+    // Input and Output thread
     public static Scheduler IOThread() {
         return Schedulers.io();
     }

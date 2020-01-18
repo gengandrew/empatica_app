@@ -46,9 +46,9 @@ import com.empatica.empalink.delegate.EmpaStatusDelegate;
 
 public class MainActivity extends AppCompatActivity implements EmpaDataDelegate, EmpaStatusDelegate {
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
-    private EmpaDeviceManager deviceManager = null;
     private static final int PERMISSION_CODE = 1;
-    private Integer ACCEL_DEVIATION = 10;
+    private static final int ACCEL_DEVIATION = 10;
+    private EmpaDeviceManager deviceManager = null;
 
     private Integer participantID = null;
     private Integer sessionID = null;
@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private TextView heartLabel;
     private TextView statusLabel;
     private TextView sessionLabel;
-    private LinearLayout dataCnt;
+    private LinearLayout dataArea;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         setContentView(R.layout.activity_main);
 
         statusLabel = findViewById(R.id.status);
-        dataCnt = findViewById(R.id.dataArea);
+        dataArea = findViewById(R.id.data_area);
         accel_xLabel = findViewById(R.id.accel_x);
         accel_yLabel = findViewById(R.id.accel_y);
         accel_zLabel = findViewById(R.id.accel_z);
@@ -188,7 +188,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     @Override
     public void didDiscoverDevice(EmpaticaDevice bluetoothDevice, String deviceName, int rssi, boolean allowed) {
-        Log.d("CustomDebug", "As of this instance sessionId is " + sessionID);
         if(allowed) {
             Log.d("CustomDebug", "Device is Allowed");
         } else {
@@ -445,7 +444,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             @Override
             public void run() {
                 sessionLabel.setVisibility(View.VISIBLE);
-                dataCnt.setVisibility(View.VISIBLE);
+                dataArea.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -455,7 +454,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             @Override
             public void run() {
                 sessionLabel.setVisibility(View.INVISIBLE);
-                dataCnt.setVisibility(View.INVISIBLE);
+                dataArea.setVisibility(View.INVISIBLE);
             }
         });
     }

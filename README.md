@@ -21,4 +21,4 @@ A simple android application for connecting to an Empatica E4 device via bluetoo
 - Sync and build the project while ensuring no errors occur.
 - Run project through a usb port on an android device accepting all permissions required (Internet, Bluetooth, location, and etc.).
 - For debugging mode run project on debug and in Logcat filter by "CustomDebug" to see all debug outputs.
-
+- For more information contact members of the wisconsin hci lab.

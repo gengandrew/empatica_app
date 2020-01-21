@@ -197,7 +197,6 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             deviceManager.stopScanning();
             try {
                 deviceManager.connectDevice(bluetoothDevice);
-                //updateLabel(deviceNameLabel, "To: " + deviceName);
                 BluetoothDevice bd = deviceManager.getActiveDevice();
                 Log.d("CustomDebug", "Connected to device is named [" + bd.getName() + "] with address [" + bd.getAddress() + "]");
             } catch (ConnectionNotAllowedException e) {
@@ -231,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             Log.d("CustomDebug", "Device is Connected");
             show();
         } else if (status == EmpaStatus.DISCONNECTED) {
-            Log.d("CustomDebug", "Device is Disconnect");
+            Log.d("CustomDebug", "Device is Disconnected");
             hide();
         }
     }

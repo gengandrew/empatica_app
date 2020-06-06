@@ -25,11 +25,10 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.util.Log;
 import io.reactivex.functions.Consumer;
-import retrofit2.Call;
-import retrofit2.Callback;
 import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.ArrayList;
 
 import com.empatica.application.retrofit.IBackend;
 import com.empatica.application.retrofit.CallResponse;
@@ -48,10 +47,13 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
     private static final int PERMISSION_CODE = 1;
     private static final int ACCEL_DEVIATION = 10;
+    private boolean isDataLocalized = true;
+    private String ipAddress = "";
     private EmpaDeviceManager deviceManager = null;
 
-//    private Integer participantID = null;
-//    private Integer sessionID = null;
+    private ArrayList<String[]> Physiology_Store = new ArrayList<String[]>();
+    private ArrayList<Double[]> Accels_Store = new ArrayList<Double[]>();
+
     private Float bvp = null;
     private Float eda = null;
     private Float ibi = null;
@@ -104,22 +106,41 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             }
         });
 
-//        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
-//        alertBuilder.setTitle("Please Insert Participant Number");
-//        alertBuilder.setCancelable(false);
-//        final EditText participantIdInput = new EditText(this);
-//        participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
-//        alertBuilder.setView(participantIdInput);
-//        alertBuilder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
-//            @Override
-//            public void onClick(DialogInterface dialog, int which) {
-//                participantID = Integer.parseInt(participantIdInput.getText().toString());
-//                InsertAssociation(participantID);
-//            }
-//        });
-//        alertBuilder.show();
+        final MainActivity temp = this;
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+        alertBuilder.setTitle("Select the mode for data collection");
+        alertBuilder.setPositiveButton("Store data Locally", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                isDataLocalized = true;
+                initDeviceManager();
+            }
+        });
+        alertBuilder.setPositiveButton("Store data Remotely", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                isDataLocalized = false;
 
-        initDeviceManager();
+                AlertDialog.Builder ipAlertBuilder = new AlertDialog.Builder(temp);
+                ipAlertBuilder.setTitle("Please Insert Participant Number");
+                ipAlertBuilder.setCancelable(false);
+                final EditText participantIdInput = new EditText(temp);
+                participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
+                ipAlertBuilder.setView(participantIdInput);
+                ipAlertBuilder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ipAddress = participantIdInput.getText().toString();
+                    }
+                });
+                ipAlertBuilder.show();
+
+                initDeviceManager();
+            }
+        });
+        alertBuilder.show();
+
+//        initDeviceManager();
     }
 
     private void initDeviceManager() {
@@ -242,6 +263,18 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     }
 
     @Override
+    public void didFailedScanning(int errorCode) {
+        Log.d("CustomDebug", "didFailedScanning has been evoked");
+        show();
+    }
+
+    @Override
+    public void bluetoothStateChanged() {
+        Log.d("CustomDebug", "bluetoothStateChanged has been evoked");
+        show();
+    }
+
+    @Override
     public void didReceiveTag(double timestamp) {
         Log.d("CustomDebug", "Tag is [" + timestamp + "]");
     }
@@ -255,9 +288,20 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveBVP(float bvp, double timestamp) {
         this.bvp = bvp;
         if(checkDataPostConditions()) {
-            InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
-                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
-            Log.d("CustomDebug", "BVP of [" + bvp + "] has been pushed");
+            if(isDataLocalized) {
+                String[] data = new String[6];
+                data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                data[1] = String.valueOf(timestamp);
+                data[2] = String.valueOf(this.bvp);
+                data[3] = String.valueOf(this.eda);
+                data[4] = String.valueOf(this.heartRate);
+                data[5] = String.valueOf(this.temperature);
+                Physiology_Store.add(data);
+            } else {
+                InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                        timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+                Log.d("CustomDebug", "BVP of [" + bvp + "] has been pushed");
+            }
         }
         updateLabel(bvpLabel, Float.toString(bvp));
     }
@@ -370,37 +414,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         }
     }
 
-//    private void InsertAssociation(int value) {
-//        IBackend backendService = RetrofitClient.getService();
-//        Call<CallResponse> call = backendService.InsertAssociation(value);
-//        call.enqueue(new Callback<CallResponse>() {
-//            @Override
-//            public void onResponse(Call<CallResponse> call, retrofit2.Response<CallResponse> response) {
-//                Log.d("CustomDebug", "Going to on Response");
-//                if(response.isSuccessful()) {
-//                    sessionID = response.body().getSessionID();
-//                    updateLabel(sessionLabel, "Current session has ID of [" + sessionID.toString() + "]");
-//                    Log.d("CustomDebug", "Internal sessionID has been set as " + sessionID);
-//                } else {
-//                    Log.d("CustomDebug", "Going to on not successful response");
-//                    updateLabel(sessionLabel, "onResponse failure from InsertAssociation [please try again]");
-//                    Toast.makeText(MainActivity.this, "Failure to get response from InsertAssociation", Toast.LENGTH_SHORT).show();
-//                }
-//            }
-//
-//            @Override
-//            public void onFailure(Call<CallResponse> call, Throwable t) {
-//                Log.d("CustomDebug", "Going to on Failure");
-//                Log.d("CustomDebug", t.toString());
-//                updateLabel(sessionLabel, "onFailure from InsertAssociation [please try again]");
-//                Toast.makeText(MainActivity.this, "InsertAssociation returns to onFailure", Toast.LENGTH_SHORT).show();
-//            }
-//        });
-//    }
-
     private void InsertData(String utc, double e4Time, float bvp, float eda,
                             float ibi, float heartRate, float temperature) {
-        IBackend backendService = RetrofitClient.getService();
+        IBackend backendService = RetrofitClient.getService(ipAddress);
         backendService.InsertData(utc, e4Time, bvp, eda, ibi, heartRate, temperature)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())
@@ -419,7 +435,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
     private void InsertAcceleration(String utc, double e4Time, float accelX,
                                     float accelY, float accelZ) {
-        IBackend backendService = RetrofitClient.getService();
+        IBackend backendService = RetrofitClient.getService(ipAddress);
         backendService.InsertAcceleration(utc, e4Time, accelX, accelY, accelZ)
                 .subscribeOn(SchedulerProvider.IOThread())
                 .observeOn(SchedulerProvider.UIThread())

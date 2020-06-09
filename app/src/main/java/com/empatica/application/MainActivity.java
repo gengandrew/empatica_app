@@ -29,7 +29,9 @@ import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
+import java.io.FileWriter;
 
+import com.opencsv.CSVWriter;
 import com.empatica.application.retrofit.IBackend;
 import com.empatica.application.retrofit.CallResponse;
 import com.empatica.application.retrofit.RetrofitClient;
@@ -52,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private EmpaDeviceManager deviceManager = null;
 
     private ArrayList<String[]> Physiology_Store = new ArrayList<String[]>();
-    private ArrayList<Double[]> Accels_Store = new ArrayList<Double[]>();
+    private ArrayList<String[]> Accels_Store = new ArrayList<String[]>();
 
     private Float bvp = null;
     private Float eda = null;
@@ -96,11 +98,24 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         disconnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (deviceManager != null) {
+                if(deviceManager != null) {
                     deviceManager.stopScanning();
                     deviceManager.disconnect();
                     deviceManager.cleanUp();
                     deviceManager = null;
+                }
+
+                if(isDataLocalized) {
+                    try {
+                        String csvPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+                        Log.d("CustomDebug", csvPath);
+                        CSVWriter writer = new CSVWriter(new FileWriter(csvPath));
+                        writer.writeAll(Physiology_Store);
+                        writer.close();
+                    } catch (Exception e) {
+                        Log.d("CustomDebug", "Exception occurred during csv write");
+                        Log.d("CustomDebug", e.toString());
+                    }
                 }
                 initDeviceManager();
             }
@@ -126,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 ipAlertBuilder.setCancelable(false);
                 final EditText participantIdInput = new EditText(temp);
                 participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
+                participantIdInput.setText("http://192.168.8.105:8006/api/", TextView.BufferType.EDITABLE);
                 ipAlertBuilder.setView(participantIdInput);
                 ipAlertBuilder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
                     @Override
@@ -310,9 +326,20 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveGSR(float gsr, double timestamp) {
         this.eda = gsr;
         if(checkDataPostConditions()) {
-            InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
-                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
-            Log.d("CustomDebug", "GSR of [" + gsr + "] has been pushed");
+            if(isDataLocalized) {
+                String[] data = new String[6];
+                data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                data[1] = String.valueOf(timestamp);
+                data[2] = String.valueOf(this.bvp);
+                data[3] = String.valueOf(this.eda);
+                data[4] = String.valueOf(this.heartRate);
+                data[5] = String.valueOf(this.temperature);
+                Physiology_Store.add(data);
+            } else {
+                InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                        timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+                Log.d("CustomDebug", "GSR of [" + gsr + "] has been pushed");
+            }
         }
         updateLabel(edaLabel, Float.toString(gsr));
     }
@@ -322,9 +349,20 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         this.ibi = ibi;
         this.heartRate = 60/ibi;
         if(checkDataPostConditions()) {
-            InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
-                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
-            Log.d("CustomDebug", "IBI of [" + ibi + "] has been pushed");
+            if(isDataLocalized) {
+                String[] data = new String[6];
+                data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                data[1] = String.valueOf(timestamp);
+                data[2] = String.valueOf(this.bvp);
+                data[3] = String.valueOf(this.eda);
+                data[4] = String.valueOf(this.heartRate);
+                data[5] = String.valueOf(this.temperature);
+                Physiology_Store.add(data);
+            } else {
+                InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                        timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+                Log.d("CustomDebug", "IBI of [" + ibi + "] has been pushed");
+            }
         }
         updateLabel(ibiLabel, Float.toString(ibi));
         updateLabel(heartLabel, Float.toString(heartRate));
@@ -334,9 +372,20 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveTemperature(float temp, double timestamp) {
         this.temperature = temp;
         if(checkDataPostConditions()) {
-            InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
-                    timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
-            Log.d("CustomDebug", "Temperature of [" + temp + "] has been pushed");
+            if(isDataLocalized) {
+                String[] data = new String[6];
+                data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                data[1] = String.valueOf(timestamp);
+                data[2] = String.valueOf(this.bvp);
+                data[3] = String.valueOf(this.eda);
+                data[4] = String.valueOf(this.heartRate);
+                data[5] = String.valueOf(this.temperature);
+                Physiology_Store.add(data);
+            } else {
+                InsertData(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                        timestamp, this.bvp, this.eda, this.ibi, this.heartRate, this.temperature);
+                Log.d("CustomDebug", "Temperature of [" + temp + "] has been pushed");
+            }
         }
         updateLabel(temperatureLabel, Float.toString(temp));
     }
@@ -344,9 +393,19 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
         if(checkAccelPostConditions(x, y, z)) {
-            InsertAcceleration(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
-                    timestamp, x, y, z);
-            Log.d("CustomDebug", "Acceleration of [" + x + " " + y + " " + z + "] has been pushed");
+            if(isDataLocalized) {
+                String[] data = new String[5];
+                data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                data[1] = String.valueOf(timestamp);
+                data[2] = String.valueOf(x);
+                data[3] = String.valueOf(y);
+                data[4] = String.valueOf(z);
+                Accels_Store.add(data);
+            } else {
+                InsertAcceleration(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
+                        timestamp, x, y, z);
+                Log.d("CustomDebug", "Acceleration of [" + x + " " + y + " " + z + "] has been pushed");
+            }
         }
         this.accelX = x;
         this.accelY = y;

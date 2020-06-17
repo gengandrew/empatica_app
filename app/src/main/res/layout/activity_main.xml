@@ -13,7 +13,7 @@
         android:layout_height="36dp"/>
 
     <TextView
-        android:id="@+id/session_label"
+        android:id="@+id/battery_label"
         android:layout_width="match_parent"
         android:layout_height="36dp"
         android:text="@string/calibrating_text"/>

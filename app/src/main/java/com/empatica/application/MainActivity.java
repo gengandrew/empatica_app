@@ -25,6 +25,8 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.util.Log;
 import io.reactivex.functions.Consumer;
+
+import java.io.File;
 import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -33,7 +35,6 @@ import java.io.FileWriter;
 
 import com.opencsv.CSVWriter;
 import com.empatica.application.retrofit.IBackend;
-import com.empatica.application.retrofit.CallResponse;
 import com.empatica.application.retrofit.RetrofitClient;
 import com.empatica.application.retrofit.SchedulerProvider;
 import com.empatica.empalink.ConnectionNotAllowedException;
@@ -74,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private TextView temperatureLabel;
     private TextView heartLabel;
     private TextView statusLabel;
-    private TextView sessionLabel;
+    private TextView batteryLabel;
     private LinearLayout dataArea;
 
     @Override
@@ -92,8 +93,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         ibiLabel = findViewById(R.id.ibi);
         temperatureLabel = findViewById(R.id.temperature);
         heartLabel = findViewById(R.id.heart);
-        sessionLabel = findViewById(R.id.session_label);
+        batteryLabel = findViewById(R.id.battery_label);
 
+        final MainActivity temp = this;
         final Button disconnectButton = findViewById(R.id.disconnectButton);
         disconnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -107,11 +109,25 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
 
                 if(isDataLocalized) {
                     try {
+                        if(ContextCompat.checkSelfPermission(temp, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(temp, new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, PERMISSION_CODE);
+                        }
+
                         String csvPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+                        csvPath = csvPath + File.separator + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                         Log.d("CustomDebug", csvPath);
-                        CSVWriter writer = new CSVWriter(new FileWriter(csvPath));
-                        writer.writeAll(Physiology_Store);
-                        writer.close();
+
+                        File physiology_file = new File(csvPath + "_P.csv");
+                        physiology_file.createNewFile();
+                        CSVWriter physiology_writer = new CSVWriter(new FileWriter(physiology_file));
+                        physiology_writer.writeAll(Physiology_Store);
+                        physiology_writer.close();
+
+                        File accel_file = new File(csvPath + "_A.csv");
+                        accel_file.createNewFile();
+                        CSVWriter accel_writer = new CSVWriter(new FileWriter(accel_file));
+                        accel_writer.writeAll(Accels_Store);
+                        accel_writer.close();
                     } catch (Exception e) {
                         Log.d("CustomDebug", "Exception occurred during csv write");
                         Log.d("CustomDebug", e.toString());
@@ -121,42 +137,38 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
             }
         });
 
-        final MainActivity temp = this;
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
-        alertBuilder.setTitle("Select the mode for data collection");
-        alertBuilder.setPositiveButton("Store data Locally", new DialogInterface.OnClickListener() {
+        alertBuilder.setTitle("Select where the data is stored");
+        alertBuilder.setPositiveButton("Store Data Locally", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 isDataLocalized = true;
                 initDeviceManager();
             }
         });
-        alertBuilder.setPositiveButton("Store data Remotely", new DialogInterface.OnClickListener() {
+        alertBuilder.setNegativeButton("Store Data Remotely", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 isDataLocalized = false;
 
                 AlertDialog.Builder ipAlertBuilder = new AlertDialog.Builder(temp);
-                ipAlertBuilder.setTitle("Please Insert Participant Number");
+                ipAlertBuilder.setTitle("Please Insert localhost ip");
                 ipAlertBuilder.setCancelable(false);
                 final EditText participantIdInput = new EditText(temp);
                 participantIdInput.setInputType(InputType.TYPE_CLASS_TEXT);
-                participantIdInput.setText("http://192.168.8.105:8006/api/", TextView.BufferType.EDITABLE);
+                participantIdInput.setText("192.168.8.107", TextView.BufferType.EDITABLE);
                 ipAlertBuilder.setView(participantIdInput);
                 ipAlertBuilder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        ipAddress = participantIdInput.getText().toString();
+                        ipAddress = "http://" + participantIdInput.getText().toString() + ":8006/api/";
+                        initDeviceManager();
                     }
                 });
                 ipAlertBuilder.show();
-
-                initDeviceManager();
             }
         });
         alertBuilder.show();
-
-//        initDeviceManager();
     }
 
     private void initDeviceManager() {
@@ -298,6 +310,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didReceiveBatteryLevel(float battery, double timestamp) {
         Log.d("CustomDebug", "Battery is [" + battery + "]");
+        updateLabel(batteryLabel, "Battery: " + Float.toString(battery*100) + "%");
     }
 
     @Override
@@ -515,7 +528,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                sessionLabel.setVisibility(View.VISIBLE);
+                batteryLabel.setVisibility(View.VISIBLE);
                 dataArea.setVisibility(View.VISIBLE);
             }
         });
@@ -525,7 +538,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                sessionLabel.setVisibility(View.INVISIBLE);
+                batteryLabel.setVisibility(View.INVISIBLE);
                 dataArea.setVisibility(View.INVISIBLE);
             }
         });

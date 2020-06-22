@@ -14,7 +14,6 @@ A simple android application for connecting to an Empatica E4 device via bluetoo
 
 - In "MainActivity" ensure EMPATICA_API_KEY is the expected value.
 - In "MainActivity" make sure ACCEL_DEVIATION is the expected value.
-- In "RetrofitClient" ensure that baseUrl has the correct localhost ip and the port is congruent with the port in empactica_backend.
 
 ## Getting started
 

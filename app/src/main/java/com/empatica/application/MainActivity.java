@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     private static final String EMPATICA_API_KEY = "ccd024d253354014994e5eece248b84d";
     private static final int PERMISSION_CODE = 1;
     private static final int ACCEL_DEVIATION = 10;
-    private boolean isDataLocalized = true;
+    public static boolean isDataLocalized = true;
     private String ipAddress = "";
     private EmpaDeviceManager deviceManager = null;
 
@@ -106,27 +106,31 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                     deviceManager.cleanUp();
                     deviceManager = null;
                 }
+                Log.d("CustomDebug", "isDataLocalized is " + MainActivity.isDataLocalized);
 
-                if(isDataLocalized) {
+                if(MainActivity.isDataLocalized) {
                     try {
                         if(ContextCompat.checkSelfPermission(temp, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                             ActivityCompat.requestPermissions(temp, new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, PERMISSION_CODE);
                         }
 
+                        ArrayList<String[]> Physiology_Store_Clone =  new ArrayList<String[]>(Physiology_Store);
+                        ArrayList<String[]> Accels_Store_Clone =  new ArrayList<String[]>(Accels_Store);
+
                         String csvPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-                        csvPath = csvPath + File.separator + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+                        csvPath = csvPath + File.separator + new SimpleDateFormat("yyyy-MM-dd HH.mm.ss.SSS").format(new Date());
                         Log.d("CustomDebug", csvPath);
 
                         File physiology_file = new File(csvPath + "_P.csv");
                         physiology_file.createNewFile();
                         CSVWriter physiology_writer = new CSVWriter(new FileWriter(physiology_file));
-                        physiology_writer.writeAll(Physiology_Store);
+                        physiology_writer.writeAll(Physiology_Store_Clone);
                         physiology_writer.close();
 
                         File accel_file = new File(csvPath + "_A.csv");
                         accel_file.createNewFile();
                         CSVWriter accel_writer = new CSVWriter(new FileWriter(accel_file));
-                        accel_writer.writeAll(Accels_Store);
+                        accel_writer.writeAll(Accels_Store_Clone);
                         accel_writer.close();
                     } catch (Exception e) {
                         Log.d("CustomDebug", "Exception occurred during csv write");
@@ -142,14 +146,13 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         alertBuilder.setPositiveButton("Store Data Locally", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                isDataLocalized = true;
                 initDeviceManager();
             }
         });
         alertBuilder.setNegativeButton("Store Data Remotely", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                isDataLocalized = false;
+                MainActivity.isDataLocalized = false;
 
                 AlertDialog.Builder ipAlertBuilder = new AlertDialog.Builder(temp);
                 ipAlertBuilder.setTitle("Please Insert localhost ip");
@@ -317,7 +320,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveBVP(float bvp, double timestamp) {
         this.bvp = bvp;
         if(checkDataPostConditions()) {
-            if(isDataLocalized) {
+            if(MainActivity.isDataLocalized) {
                 String[] data = new String[6];
                 data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                 data[1] = String.valueOf(timestamp);
@@ -339,7 +342,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveGSR(float gsr, double timestamp) {
         this.eda = gsr;
         if(checkDataPostConditions()) {
-            if(isDataLocalized) {
+            if(MainActivity.isDataLocalized) {
                 String[] data = new String[6];
                 data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                 data[1] = String.valueOf(timestamp);
@@ -362,7 +365,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
         this.ibi = ibi;
         this.heartRate = 60/ibi;
         if(checkDataPostConditions()) {
-            if(isDataLocalized) {
+            if(MainActivity.isDataLocalized) {
                 String[] data = new String[6];
                 data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                 data[1] = String.valueOf(timestamp);
@@ -385,7 +388,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     public void didReceiveTemperature(float temp, double timestamp) {
         this.temperature = temp;
         if(checkDataPostConditions()) {
-            if(isDataLocalized) {
+            if(MainActivity.isDataLocalized) {
                 String[] data = new String[6];
                 data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                 data[1] = String.valueOf(timestamp);
@@ -406,7 +409,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     @Override
     public void didReceiveAcceleration(int x, int y, int z, double timestamp) {
         if(checkAccelPostConditions(x, y, z)) {
-            if(isDataLocalized) {
+            if(MainActivity.isDataLocalized) {
                 String[] data = new String[5];
                 data[0] = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
                 data[1] = String.valueOf(timestamp);
@@ -418,6 +421,7 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
                 InsertAcceleration(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()),
                         timestamp, x, y, z);
                 Log.d("CustomDebug", "Acceleration of [" + x + " " + y + " " + z + "] has been pushed");
+                Log.d("CustomDebug", "Size of data is " + Accels_Store.size() + " " + Physiology_Store.size());
             }
         }
         this.accelX = x;
@@ -548,9 +552,9 @@ public class MainActivity extends AppCompatActivity implements EmpaDataDelegate,
     protected void onPause() {
         super.onPause();
         Log.d("CustomDebug", "Entering onPause");
-        if (deviceManager != null) {
-            deviceManager.stopScanning();
-        }
+//        if (deviceManager != null) {
+//            deviceManager.stopScanning();
+//        }
     }
 
     @Override

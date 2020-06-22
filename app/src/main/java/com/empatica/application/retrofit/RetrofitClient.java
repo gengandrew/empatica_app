@@ -25,6 +25,9 @@ public class RetrofitClient {
 //    }
 
     public static IBackend getService(String baseUrl) {
+//        Gson gson = new GsonBuilder()
+//                .setLenient()
+//                .create();
         Retrofit instance = new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
